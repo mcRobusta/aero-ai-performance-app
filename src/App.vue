@@ -23,12 +23,17 @@
     <br>
     <br>
 
+    <vs-button @click="printData">
+    </vs-button>
+
     <vs-row vs-w="12" vs-type="flex" vs-justify="flex-start">
     <!-- Inputs -->
       <vs-col vs-w="3" vs-offset="1.5">
         <div
         v-for="(field) in inputList" 
-        :key="field.field">
+        :key="field.field"
+        vs-type="flex" 
+        vs-justify="center">
 
           <div v-if="field.type == 'numeric'">
             {{ field.field }}
@@ -78,7 +83,7 @@
 </template>
 
 <script>
-
+const fs = require('fs');
 export default {
   name: 'App',
   data:() => ({
@@ -88,7 +93,8 @@ export default {
         inputList: [
           {'field': 'Temperature', 'type': 'numeric-text', 'value': 0, 'unit':'ºC', 'min': -20, 'max': 65},
           {'field':'Runway Length', 'type': 'numeric', 'value': 1500, 'unit':'m', 'min': 1500, 'max':3000, 'step': 250},
-          {'field':'Pressure Altitude', 'type': 'numeric-slider', 'value': 0, 'unit':'FT', 'max': 2002, 'step': 1000}
+          {'field':'Pressure Altitude', 'type': 'numeric-slider', 'value': 0, 'unit':'FT', 'max': 2002, 'step': 1000},
+          {'field':'Max Takeoff Weight', 'type': 'numeric-text', 'value': 0, 'unit':'1000KG', 'min': 40, 'max': 80, 'step': 0.1}
         ],
         outputList: {
           'wind': 0,
@@ -98,7 +104,13 @@ export default {
           'cog>27': false,
           'thrust': false
         },
-      })
+      }),
+  methods: {
+    printData() {
+      const datafile = require('./assets/datafile.json')
+      console.log(datafile[0])
+    }
+  }
 }
 </script>
 
