@@ -40,6 +40,13 @@ def strip_extra_v_values(array):
             else:
                 array[counter] = splitArray[1]
     return array
+
+def normalise(v_array):
+    for counter in range(len(v_array)):
+        v_array[counter] = float(v_array[counter])
+        if v_array[counter] < 100:
+            v_array[counter] += 100
+    return v_array
         
 datafile = open(os.getcwd() + "/data-extraction/datafile.json", "w")
 
@@ -58,7 +65,6 @@ for fileCounter in range(9):
         input_values = clean_array(input_values.split(' '))
         # Each line of input_values is structured like so:
         # [ Temperature,  TakeoffWeight, Codes, TakeoffWeight, Codes, etc. ]
-        #print(input_values)
         v_values = fileArray[2*iterator+1].replace('*', '')
         v_values = clean_array(v_values.split('\t'))
         temp = input_values[0]
@@ -70,19 +76,22 @@ for fileCounter in range(9):
         v_1 = strip_extra_v_values(v_1)
         v_r = strip_extra_v_values(v_r)
         v_2 = strip_extra_v_values(v_2)
+        v_1 = normalise(v_1)
+        v_r = normalise(v_r)
+        v_2 = normalise(v_2)
         takeoff_weights = extract_takeoff_weights(input_values)
         # Aero AI's file output is structured like so:
         # [ Pressure Altitude, Temperature, Max Takeoff Weight, Runway Length, V1, Vr, V2 ]
         for x in range(5):
             outputLine = {
-                'pressureAltitude': float(pressureAltitudeArray[fileCounter % 3]), 
-                'temperature': float(temp),
-                'maxToW': float(takeoff_weights[x]),
-                'runwayLengths': float(runwayLengths[x]),
-                'v_1': float(v_1[x]),
-                'v_r': float(v_r[x]),
-                'v_2': float(v_2[x])
+                "pressureAltitude": float(pressureAltitudeArray[fileCounter % 3]), 
+                "temperature": float(temp),
+                "maxToW": float(takeoff_weights[x]),
+                "runwayLengths": float(runwayLengths[x]),
+                "v_1": float(v_1[x]),
+                "v_r": float(v_r[x]),
+                "v_2": float(v_2[x])
             }
-            datafile.write(str(outputLine))
+            datafile.write(str(outputLine) + ",")
 
 datafile.close()

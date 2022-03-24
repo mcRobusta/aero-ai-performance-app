@@ -74,8 +74,14 @@
         </div>
       </vs-col>
     <!-- Outputs -->
-      <vs-col vs-type="flex" vs-justify="center" vs-align="center" vs-w="3">
-        <p>Outputs</p>
+    <vs-col vs-w="3" vs-offset="1.5">
+        <div
+        v-for="(field) in outputList" 
+        :key="field.field"
+        vs-type="flex" 
+        vs-justify="flex-end">
+        <p>{{ field.field + ': ' + field.value }}KTs</p>
+        </div>
       </vs-col>
     </vs-row>
 
@@ -83,7 +89,7 @@
 </template>
 
 <script>
-const fs = require('fs');
+const datafile = require('./assets/datafile.json')
 export default {
   name: 'App',
   data:() => ({
@@ -96,18 +102,14 @@ export default {
           {'field':'Pressure Altitude', 'type': 'numeric-slider', 'value': 0, 'unit':'FT', 'max': 2002, 'step': 1000},
           {'field':'Max Takeoff Weight', 'type': 'numeric-text', 'value': 0, 'unit':'1000KG', 'min': 40, 'max': 80, 'step': 0.1}
         ],
-        outputList: {
-          'wind': 0,
-          'temp': 0,
-          'qnt': 0,
-          'anti-ice': false,
-          'cog>27': false,
-          'thrust': false
-        },
+        outputList: [
+          {'field': 'V1', 'value': 0},
+          {'field': 'Vr', 'value': 0},
+          {'field': 'V2', 'value': 0}
+        ],
       }),
   methods: {
     printData() {
-      const datafile = require('./assets/datafile.json')
       console.log(datafile[0])
     }
   }
