@@ -80,7 +80,7 @@
         :key="field.field"
         vs-type="flex" 
         vs-justify="flex-end">
-        <p>{{ field.field + ': ' + field.value }}KTs</p>
+        <p>{{ field.field + ': ' + field.value + field.unit }}</p>
         </div>
       </vs-col>
     </vs-row>
@@ -100,17 +100,164 @@ export default {
           {'field': 'Temperature', 'type': 'numeric-text', 'value': 0, 'unit':'ºC', 'min': -20, 'max': 65},
           {'field':'Runway Length', 'type': 'numeric', 'value': 1500, 'unit':'m', 'min': 1500, 'max':3000, 'step': 250},
           {'field':'Pressure Altitude', 'type': 'numeric-slider', 'value': 0, 'unit':'FT', 'max': 2002, 'step': 1000},
-          {'field':'Max Takeoff Weight', 'type': 'numeric-text', 'value': 0, 'unit':'1000KG', 'min': 40, 'max': 80, 'step': 0.1}
         ],
         outputList: [
-          {'field': 'V1', 'value': 0},
-          {'field': 'Vr', 'value': 0},
-          {'field': 'V2', 'value': 0}
+          {'field': 'V1', 'value': 0, 'unit':'Kt'},
+          {'field': 'Vr', 'value': 0, 'unit':'Kt'},
+          {'field': 'V2', 'value': 0, 'unit':'Kt'},
+          {'field':'Max Takeoff Weight', 'value':0, 'unit':'MG (megagram- 1000Kg)'}
         ],
       }),
   methods: {
     printData() {
-      console.log(datafile[0])
+      var filteredArray = this.searchDatafile(
+        this.inputList[1].value,
+        this.inputList[2].value
+      )
+      var primeIndexArray = this.filterArrays(filteredArray, this.inputList[0].value);
+      const primeIndex = primeIndexArray[0]
+      const primeIndexIsNegative = primeIndexArray[1]
+      var primeEntries = [ filteredArray[ primeIndex ] ]
+      var maxToW = 0
+      if ( primeIndexIsNegative ) {
+        maxToW = filteredArray[primeIndex].maxToW
+        if ( primeIndex > 0 ) {
+          primeEntries.push( filteredArray[ primeIndex - 1 ] )
+        } else {
+          primeEntries.push( filteredArray[0] )
+        }
+      } else {
+        maxToW = filteredArray[primeIndex + 1].maxToW
+        if ( primeIndex < filteredArray.length ) {
+          primeEntries.push( filteredArray[ primeIndex + 1] )
+        } else {
+          primeEntries.push( filteredArray[ filteredArray.length - 1 ] )
+        }
+      }
+      console.log(primeEntries)
+      const v_array = this.interpolateData(primeEntries, this.inputList[0].value);
+      const v_1 = v_array[0]
+      const v_r = v_array[1]
+      const v_2 = v_array[2]
+      console.log(v_1)
+      console.log(v_r)
+      console.log(v_2)
+      console.log(maxToW)
+    },
+    searchDatafile(runway, pressureAltitude) {
+      var validEntries = [];
+      for (var i = 0; i < datafile.length; i++) {
+        var dataEntry = datafile[i];
+        var searchParameters = 
+          pressureAltitude == dataEntry.pressureAltitude &&
+          runway == dataEntry.runwayLengths;
+        if (searchParameters) {
+           validEntries.push(dataEntry);
+        }
+      }
+      return validEntries;
+    },
+    filterArrays(arrayList, temperature) {
+      var temperatureDistance = 100;
+      var distance = 0;
+      var primeIndex = 0;
+      var primeIndexIsNegative = false;
+      for (var i = 0; i < arrayList.length; i++) {
+        var negativeIndex = false;
+        distance = arrayList[i].temperature - temperature;
+        if (distance < 0) {
+          negativeIndex = true;
+          distance *= -1;
+        }
+        if (distance < temperatureDistance) {
+          temperatureDistance = distance;
+          primeIndex = i;
+          primeIndexIsNegative = negativeIndex;
+        }
+      }
+      return [primeIndex, primeIndexIsNegative];
+    },
+    interpolateData(primeEntries, temperature){
+      var temperature_0 = primeEntries[0].temperature;
+      var temperature_1 = primeEntries[1].temperature;
+      var inOrder = true;
+      if (primeEntries[0].temperature > primeEntries[1].temperature) {
+        temperature_0 = primeEntries[1].temperature;
+        temperature_1 = primeEntries[0].temperature;
+        inOrder = false;
+      }
+      console.log(temperature_0)
+      console.log(temperature_1)
+      var alpha = temperature - temperature_0;
+      alpha /= temperature_1 - temperature_0;
+      var lower_v_1 = primeEntries[0].v_1
+      var lower_v_r = primeEntries[0].v_r
+      var lower_v_2 = primeEntries[0].v_2
+      var upper_v_1 = primeEntries[1].v_1
+      var upper_v_r = primeEntries[1].v_r
+      var upper_v_2 = primeEntries[1].v_2
+      if (!inOrder) {
+        lower_v_1 = primeEntries[1].v_1
+        lower_v_r = primeEntries[1].v_r
+        lower_v_2 = primeEntries[1].v_2
+        upper_v_1 = primeEntries[0].v_1
+        upper_v_r = primeEntries[0].v_r
+        upper_v_2 = primeEntries[0].v_2
+      }
+      var v_1 = alpha * (upper_v_1 - lower_v_1) 
+      v_1 += lower_v_1
+      var v_r = alpha * (upper_v_r - lower_v_r) 
+      v_r += lower_v_r
+      var v_2 = alpha * (upper_v_2 - lower_v_2) 
+      v_2 += lower_v_2
+      return [v_1, v_r, v_2]
+    },
+    computeV() {
+      var filteredArray = this.searchDatafile(
+        this.inputList[1].value,
+        this.inputList[2].value
+      )
+      var primeIndexArray = this.filterArrays(filteredArray, this.inputList[0].value);
+      const primeIndex = primeIndexArray[0]
+      const primeIndexIsNegative = primeIndexArray[1]
+      var primeEntries = [ filteredArray[ primeIndex ] ]
+      var maxToW = 0
+      if ( primeIndexIsNegative ) {
+        maxToW = filteredArray[primeIndex].maxToW
+        if ( primeIndex > 0 ) {
+          primeEntries.push( filteredArray[ primeIndex - 1 ] )
+        } else {
+          primeEntries.push( filteredArray[0] )
+        }
+      } else {
+        maxToW = filteredArray[primeIndex + 1].maxToW
+        if ( primeIndex < filteredArray.length ) {
+          primeEntries.push( filteredArray[ primeIndex + 1] )
+        } else {
+          primeEntries.push( filteredArray[ filteredArray.length - 1 ] )
+        }
+      }
+      const v_array = this.interpolateData(primeEntries, this.inputList[0].value);
+      const v_1 = v_array[0]
+      const v_r = v_array[1]
+      const v_2 = v_array[2]
+      return [v_1, v_r, v_2, maxToW]
+    }
+  },
+  computed: {
+    v_values: {
+      v1: function() {
+        return this.outputList[0].value.computeV()[0]
+      },
+      vr: function() {
+        return this.computeV()[1]
+      },
+      v2: function() {
+        return this.computeV()[2]
+      },
+      mtow: function() {
+        return this.computeV()[3]
+      }
     }
   }
 }
