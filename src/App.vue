@@ -23,7 +23,8 @@
     <br>
     <br>
 
-    <vs-button @click="printData">
+    <vs-button @click="computeV()">
+      Calculate values
     </vs-button>
 
     <vs-row vs-w="12" vs-type="flex" vs-justify="flex-start">
@@ -41,7 +42,7 @@
             :label-placeholder="field"
             :v-model="value">
             </vs-input> -->
-            <vs-input-number v-model="field.value" :min="field.min" :max="field.max" :step="field.step"/>
+            <vs-input-number v-model="field.value" :min="field.min" :max="field.max" :step="field.step"  @input="computeV()"/>
             {{ field.value + field.unit }}
           </div>
 
@@ -51,6 +52,7 @@
               type="number"
               v-model="field.value"
               :label="field.field"
+              @change="computeV()"
             />
           </div>
 
@@ -64,7 +66,7 @@
 
           <div v-if="field.type == 'numeric-slider'">
             {{ field.field }}
-            <vs-slider v-model="field.value" :step="field.step" :max="field.max"/>
+            <vs-slider v-model="field.value" :step="field.step" :max="field.max"  @change="computeV()"/>
             <div>
               {{ field.value + field.unit }}
             </div>
@@ -90,6 +92,7 @@
 
 <script>
 const datafile = require('./assets/datafile.json')
+
 export default {
   name: 'App',
   data:() => ({
@@ -102,47 +105,15 @@ export default {
           {'field':'Pressure Altitude', 'type': 'numeric-slider', 'value': 0, 'unit':'FT', 'max': 2002, 'step': 1000},
         ],
         outputList: [
-          {'field': 'V1', 'value': 0, 'unit':'Kt'},
-          {'field': 'Vr', 'value': 0, 'unit':'Kt'},
-          {'field': 'V2', 'value': 0, 'unit':'Kt'},
-          {'field':'Max Takeoff Weight', 'value':0, 'unit':'MG (megagram- 1000Kg)'}
+          {'field': 'V1', 'value': 122, 'unit':'Kt'},
+          {'field': 'Vr', 'value': 122, 'unit':'Kt'},
+          {'field': 'V2', 'value': 127, 'unit':'Kt'},
+          {'field':'Max Takeoff Weight', 'value':65.2, 'unit':'MG (megagram- 1000Kg)'}
         ],
       }),
   methods: {
     printData() {
-      var filteredArray = this.searchDatafile(
-        this.inputList[1].value,
-        this.inputList[2].value
-      )
-      var primeIndexArray = this.filterArrays(filteredArray, this.inputList[0].value);
-      const primeIndex = primeIndexArray[0]
-      const primeIndexIsNegative = primeIndexArray[1]
-      var primeEntries = [ filteredArray[ primeIndex ] ]
-      var maxToW = 0
-      if ( primeIndexIsNegative ) {
-        maxToW = filteredArray[primeIndex].maxToW
-        if ( primeIndex > 0 ) {
-          primeEntries.push( filteredArray[ primeIndex - 1 ] )
-        } else {
-          primeEntries.push( filteredArray[0] )
-        }
-      } else {
-        maxToW = filteredArray[primeIndex + 1].maxToW
-        if ( primeIndex < filteredArray.length ) {
-          primeEntries.push( filteredArray[ primeIndex + 1] )
-        } else {
-          primeEntries.push( filteredArray[ filteredArray.length - 1 ] )
-        }
-      }
-      console.log(primeEntries)
-      const v_array = this.interpolateData(primeEntries, this.inputList[0].value);
-      const v_1 = v_array[0]
-      const v_r = v_array[1]
-      const v_2 = v_array[2]
-      console.log(v_1)
-      console.log(v_r)
-      console.log(v_2)
-      console.log(maxToW)
+      this.computeV()
     },
     searchDatafile(runway, pressureAltitude) {
       var validEntries = [];
@@ -241,23 +212,10 @@ export default {
       const v_1 = v_array[0]
       const v_r = v_array[1]
       const v_2 = v_array[2]
-      return [v_1, v_r, v_2, maxToW]
-    }
-  },
-  computed: {
-    v_values: {
-      v1: function() {
-        return this.outputList[0].value.computeV()[0]
-      },
-      vr: function() {
-        return this.computeV()[1]
-      },
-      v2: function() {
-        return this.computeV()[2]
-      },
-      mtow: function() {
-        return this.computeV()[3]
-      }
+      this.outputList[0].value = v_1
+      this.outputList[1].value = v_r
+      this.outputList[2].value = v_2
+      this.outputList[3].value = maxToW
     }
   }
 }
