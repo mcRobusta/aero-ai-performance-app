@@ -31,6 +31,19 @@
       Calculate values
     </vs-button>
 
+    <br>
+    <br>
+
+    <!--
+    <div>
+        Temperature / Pressure
+        <vs-switch v-model="dummyVModel" @change="inputToggle()">
+          <span slot="on">Temperature</span>
+          <span slot="off">Altitude</span>
+        </vs-switch>
+    </div>
+    -->
+
     <vs-row vs-w="12" vs-type="flex" vs-justify="flex-start">
     <!-- Inputs -->
       <vs-col vs-w="3" vs-offset="1">
@@ -46,7 +59,7 @@
           vs-type="flex" 
           vs-justify="center">
 
-            <div v-if="field.type == 'numeric'">
+            <div v-if="field.type == 'numeric' && field.enabled">
               {{ field.field }}
               <!-- <vs-input 
               :label-placeholder="field"
@@ -99,7 +112,7 @@
         :key="field.field"
         vs-type="flex" 
         vs-justify="flex-end">
-        <p>{{ field.field + ': ' + field.value + field.unit }}</p>
+          <p v-if="field.enabled">{{ field.field + ': ' + field.value + field.unit }}</p>
         </div>
       </vs-card>
       </vs-col>
@@ -116,6 +129,7 @@ export default {
   data:() => ({
         flightNo: '',
         takeoffRunway: 3316,
+        dummyVModel: false,
         airportList: [
           {'name': 'London Gatwick', 'code': 'EGKK 08R/26L', 'runwayLength': 3316},
           {'name': 'London Heathrow', 'code': 'EGLL 09L/27R', 'runwayLength': 3201},
@@ -124,22 +138,34 @@ export default {
         ],
         inputList: [
           {'field': 'Temperature', 'type': 'numeric', 'value': 0, 'unit':'ºC', 'min': -20, 'max': 65, 'enabled': true},
-          {'field':'Pressure Altitude', 'type': 'numeric-slider', 'value': 0, 'unit':'FT', 'max': 2002, 'step': 1000},
-          {'field':'Engine Anti-ice', 'type': 'boolean', 'value': false, 'on': "ON", "off": "OFF"},
-          {'field':'Total Anti-ice', 'type': 'boolean', 'value': false, 'on': "ON", "off": "OFF"},
-          {'field':'Air Conditioning', 'type': 'boolean', 'value': false, 'on': "ON", "off": "OFF"},
-          {'field':'FLEX / Full-thrust Takeoff', 'type': 'boolean', 'value': false, 'on': "Full-thrust", "off": "FLEX"},
+          {'field': 'Pressure', 'type': 'numeric', 'value': 0, 'unit':'hPa', 'enabled': false},
+          {'field': 'Altitude', 'type': 'numeric-slider', 'value': 0, 'unit':'FT', 'max': 2002, 'step': 1000, 'enabled': true},
+          {'field':'Engine Anti-ice', 'type': 'boolean', 'value': false, 'on': "ON", "off": "OFF", 'enabled': true},
+          {'field':'Total Anti-ice', 'type': 'boolean', 'value': false, 'on': "ON", "off": "OFF", 'enabled': true},
+          {'field':'Air Conditioning', 'type': 'boolean', 'value': false, 'on': "ON", "off": "OFF", 'enabled': true},
+          {'field':'FLEX / Full-thrust Takeoff', 'type': 'boolean', 'value': false, 'on': "Full-thrust", "off": "FLEX", 'enabled': true},
         ],
         outputList: [
-          {'field': 'V1', 'value': 122, 'unit':'Kt'},
-          {'field': 'Vr', 'value': 122, 'unit':'Kt'},
-          {'field': 'V2', 'value': 127, 'unit':'Kt'},
-          {'field':'Max Takeoff Weight', 'value':65.2, 'unit':' metric tonnes'}
+          {'field': 'V1', 'value': 122, 'unit':'Kt', 'enabled': true},
+          {'field': 'Vr', 'value': 122, 'unit':'Kt', 'enabled': true},
+          {'field': 'V2', 'value': 127, 'unit':'Kt', 'enabled': true},
+          {'field': 'Pressure', 'value': 1000, 'unit':'hPa', 'enabled': false},
+          {'field': 'Temperature', 'value': 0, 'unit':'hPa', 'enabled': false},
+          {'field':'Max Takeoff Weight', 'value':65.2, 'unit':' metric tonnes', 'enabled': true}
         ],
       }),
   methods: {
     printData() {
       this.computeV()
+    },
+
+    inputToggle() {
+      this.inputList[0].enabled = !this.inputList[0].enabled
+      this.inputList[1].enabled = !this.inputList[1].enabled
+      this.outputList[0].enabled = !this.outputList[0].enabled
+      this.outputList[1].enabled = !this.outputList[1].enabled
+      this.outputList.push(0)
+      this.outputList.pop()
     },
 
     searchDatafile(runway, pressureAltitude) {
@@ -192,31 +218,53 @@ export default {
       }
     },
 
+    thresholdChecks(v, p, type) {
+      if (type == "1") {
+        if (v < 112 && p < 0) {
+          return 112;
+        } else if (v < 111 && p < 1000) {
+          return 111;
+        } else if (v < 110 && p < 2000) {
+          return 110;
+        } else if (v < 109 && p < 3000) {
+          return 109;
+        } else if (v < 108 && p < 5000) {
+          return 108;
+        } else if (v < 107 && p < 6000) {
+          return 108;
+        } else if (v < 106 && p < 7000) {
+          return 107;
+        } else {
+          return v;
+        }
+      }
+    },
+
     computeV() {
       var filteredArray = this.searchDatafile(
         this.takeoffRunway,
-        this.inputList[1].value
+        this.inputList[2].value
       )
       var maxToW = 0
       var temperature = 0
-      if (this.inputList[5].value) { // If full-thrust takeoff:
-        if (this.inputList[2].value) { // If engine anti-ice is on:
+      if (this.inputList[6].value) { // If full-thrust takeoff:
+        if (this.inputList[3].value) { // If engine anti-ice is on:
           maxToW -= 0.25
         }
-        if (this.inputList[3].value) { // If total anti-ice is on:
+        if (this.inputList[4].value) { // If total anti-ice is on:
           maxToW -= 0.75
         }
-        if (this.inputList[4].value) { // If air conditioning is on:
+        if (this.inputList[5].value) { // If air conditioning is on:
           maxToW -= 2.2
         }
       } else {
-        if (this.inputList[2].value) { // If engine anti-ice is on:
+        if (this.inputList[3].value) { // If engine anti-ice is on:
           temperature -= 1
         }
-        if (this.inputList[3].value) { // If total anti-ice is on:
+        if (this.inputList[4].value) { // If total anti-ice is on:
           temperature -= 2
         }
-        if (this.inputList[4].value) { // If air conditioning is on:
+        if (this.inputList[5].value) { // If air conditioning is on:
           temperature -= 5
         }
       }
@@ -227,11 +275,11 @@ export default {
       const v_rArray = this.extractArray(filteredArray, "v_r")
       const v_2Array = this.extractArray(filteredArray, "v_2")
       const maxToW_array = this.extractArray(filteredArray, "maxToW")
-      const v_1 = this.graphFunction(temperatureArray, v_1Array, temperature)
-      const v_r = this.graphFunction(temperatureArray, v_rArray, temperature)
-      const v_2 = this.graphFunction(temperatureArray, v_2Array, temperature)
+      var v_1 = this.graphFunction(temperatureArray, v_1Array, temperature)
+      var v_r = this.graphFunction(temperatureArray, v_rArray, temperature)
+      var v_2 = this.graphFunction(temperatureArray, v_2Array, temperature)
       maxToW += this.graphFunction(temperatureArray, maxToW_array, temperature)
-      this.outputList[0].value = Math.round(v_1 * 10) / 10
+      this.outputList[0].value = this.thresholdChecks(v_1, this.inputList[2].value, "1")
       this.outputList[1].value = Math.round(v_r * 10) / 10
       this.outputList[2].value = Math.round(v_2 * 10) / 10
       this.outputList[3].value = Math.round(maxToW * 10) / 10
