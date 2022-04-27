@@ -9,7 +9,7 @@
         v-model="flightNo"/>
       </vs-col>
       <vs-col vs-w="3">
-        <vs-select label="Origin Airport" v-model="takeoffRunway">
+        <vs-select label="Origin Airport" v-model="takeoffRunway" @change="computeV()">
           <vs-select-item v-for="airport in airportList" :key="airport.code" :text="airport.name" :value="airport.runwayLength">
             {{airport.name}}
           </vs-select-item>
@@ -111,19 +111,11 @@
 <script>
 const datafile = require('./assets/datafile.json')
 
-const chartData = {
-    labels: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    datasets: [
-        { values: [18, 40, 30, 35, 8, 52, 17, -4] }
-    ]
-}
-
-
 export default {
   name: 'App',
   data:() => ({
         flightNo: '',
-        takeoffRunway: 0,
+        takeoffRunway: 3316,
         airportList: [
           {'name': 'London Gatwick', 'code': 'EGKK 08R/26L', 'runwayLength': 3316},
           {'name': 'London Heathrow', 'code': 'EGLL 09L/27R', 'runwayLength': 3201},
@@ -131,7 +123,7 @@ export default {
           {'name': 'Manchester', 'code': 'EGCC 05R/23L', 'runwayLength': 3050}
         ],
         inputList: [
-          {'field': 'Temperature', 'type': 'numeric-text', 'value': 0, 'unit':'ºC', 'min': -20, 'max': 65},
+          {'field': 'Temperature', 'type': 'numeric', 'value': 0, 'unit':'ºC', 'min': -20, 'max': 65, 'enabled': true},
           {'field':'Pressure Altitude', 'type': 'numeric-slider', 'value': 0, 'unit':'FT', 'max': 2002, 'step': 1000},
           {'field':'Engine Anti-ice', 'type': 'boolean', 'value': false, 'on': "ON", "off": "OFF"},
           {'field':'Total Anti-ice', 'type': 'boolean', 'value': false, 'on': "ON", "off": "OFF"},
@@ -189,9 +181,7 @@ export default {
         if (value >= xArray[i] && value <= xArray[i + 1]) {
           const gradient = (yArray[i + 1] - yArray[i]) / (xArray[i + 1] - xArray[i])
           var interpolatedValue = gradient * value
-          console.log(interpolatedValue)
           interpolatedValue += yArray[i]
-          console.log(interpolatedValue)
           return interpolatedValue
         }
       }
@@ -231,7 +221,8 @@ export default {
         }
       }
       const temperatureArray = this.extractArray(filteredArray, "temperature")
-      temperature += this.inputList[0].value
+      temperature += parseFloat(this.inputList[0].value) // Vuesax takes numeric input as string, so conversion necessary.
+      console.log(temperature)
       const v_1Array = this.extractArray(filteredArray, "v_1")
       const v_rArray = this.extractArray(filteredArray, "v_r")
       const v_2Array = this.extractArray(filteredArray, "v_2")
